@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+
+# Check args
+while test -n "$1"; do
+	case $1 in
+		shell|sh) COMMAND=shell ;;
+		-v) set -x ;;
+	esac
+	shift
+done
+
+# Check command
+case "$COMMAND" in
+	shell)	exec docker run -ti --rm --hostname ubuntu-box --network host zedaav/ubuntu-box:latest /bin/bash ;;
+	*)		echo "No command specified"; exit 1;;
+esac

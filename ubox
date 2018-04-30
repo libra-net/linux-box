@@ -4,14 +4,44 @@ set -e
 # Check args
 while test -n "$1"; do
 	case $1 in
+		up|start) COMMAND=start ;;
+		down|stop) COMMAND=stop ;;
 		shell|sh) COMMAND=shell ;;
 		-v) set -x ;;
 	esac
 	shift
 done
 
+CONTAINER_NAME=ubuntu-box
+
+# Handle start
+function __start {
+	local status="$(docker inspect ${CONTAINER_NAME} || true)"
+	if test -z "$status"; then
+		# Container doesn't exist: run it
+		docker run -d --hostname ubuntu-box --network host --init --name ${CONTAINER_NAME} zedaav/ubuntu-box:latest /bin/bash -c "while true; do sleep 5000; done"
+	else
+		# Compute status
+		local statusKeyword=$(echo "$status" | jq -M .[0].State.Status | sed -e 's/"//g')
+		case "$statusKeyword" in
+			running)
+				# Nothing to do
+				echo "Nothing to do, ${CONTAINER_NAME} container is already up and running" ;;
+			exited)
+				# Restart execution
+				docker restart ${CONTAINER_NAME};;
+			*)
+				# Unknown status
+				echo "Unknown status for ${CONTAINER_NAME} container: $statusKeyword"
+				exit 1 ;;
+		esac
+	fi
+}
+
 # Check command
 case "$COMMAND" in
-	shell)	exec docker run -ti --rm --hostname ubuntu-box --network host zedaav/ubuntu-box:latest /bin/bash ;;
+	start)	__start ;;
+	shell)	exec docker exec -ti ${CONTAINER_NAME} /bin/bash ;;
+	stop)	docker stop ${CONTAINER_NAME} ;;
 	*)		echo "No command specified"; exit 1;;
 esac

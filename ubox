@@ -7,41 +7,49 @@ while test -n "$1"; do
 		up|start) COMMAND=start ;;
 		down|stop) COMMAND=stop ;;
 		shell|sh) COMMAND=shell ;;
+		clear) COMMAND=clear ;;
 		-v) set -x ;;
 	esac
 	shift
 done
 
 CONTAINER_NAME=ubuntu-box
+IMAGE_NAME=zedaav/ubuntu-box:latest
+DOCKER_RUN_ARGS="-v ubuntu-box-home:/home --hostname ubuntu-box --network host"
 
 # Handle start
 function __start {
-	local status="$(docker inspect ${CONTAINER_NAME} || true)"
-	if test -z "$status"; then
-		# Container doesn't exist: run it
-		docker run -d --hostname ubuntu-box --network host --init --name ${CONTAINER_NAME} zedaav/ubuntu-box:latest /bin/bash -c "while true; do sleep 5000; done"
-	else
-		# Compute status
-		local statusKeyword=$(echo "$status" | jq -M .[0].State.Status | sed -e 's/"//g')
-		case "$statusKeyword" in
-			running)
-				# Nothing to do
-				echo "Nothing to do, ${CONTAINER_NAME} container is already up and running" ;;
-			exited)
-				# Restart execution
-				docker restart ${CONTAINER_NAME};;
-			*)
-				# Unknown status
-				echo "Unknown status for ${CONTAINER_NAME} container: $statusKeyword"
-				exit 1 ;;
-		esac
-	fi
+	local status="$(docker inspect ${CONTAINER_NAME} 2> /dev/null || true)"
+	local statusKeyword=$(echo "$status" | jq -M .[0].State.Status | sed -e 's/"//g')
+	case "$statusKeyword" in
+		running)
+			# Nothing to do
+			echo "Nothing to do, ${CONTAINER_NAME} container is already up and running" ;;
+		exited)
+			# Restart execution
+			docker restart ${CONTAINER_NAME};;
+		null)
+			# Container doesn't exist: run it
+			docker run --rm $DOCKER_RUN_ARGS --user 0 --entrypoint /etc/init.sh $IMAGE_NAME
+			docker run -d $DOCKER_RUN_ARGS --name ${CONTAINER_NAME} $IMAGE_NAME ;;
+		*)
+			# Unknown status
+			echo "Unknown status for ${CONTAINER_NAME} container: $statusKeyword"
+			exit 1 ;;
+	esac
 }
 
 # Check command
 case "$COMMAND" in
 	start)	__start ;;
-	shell)	exec docker exec -ti ${CONTAINER_NAME} /bin/bash ;;
+	shell)	exec docker exec -ti -e COLUMNS=$(tput cols) -e LINES=$(tput lines) ${CONTAINER_NAME} /bin/bash ;;
 	stop)	docker stop ${CONTAINER_NAME} ;;
+	clear)
+		# Clear container
+		echo -n "Removing ${CONTAINER_NAME} container will loose all root filesystem updates; Are you sure? (y/N) "
+		read rsp
+		if test "$rsp" = "y" -o "$rsp" = "Y"; then
+			docker rm -f ${CONTAINER_NAME}
+		fi ;;
 	*)		echo "No command specified"; exit 1;;
 esac

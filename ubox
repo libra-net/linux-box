@@ -13,9 +13,10 @@ while test -n "$1"; do
 	shift
 done
 
-CONTAINER_NAME=ubuntu-box
-IMAGE_NAME=zedaav/ubuntu-box:latest
-DOCKER_RUN_ARGS="-v ubuntu-box-home:/home --hostname ubuntu-box --network host"
+UBUNTU_VERSION=${UBUNTU_VERSION:-latest}
+CONTAINER_NAME=ubuntu-box-${UBUNTU_VERSION}
+IMAGE_NAME=zedaav/ubuntu-box:${UBUNTU_VERSION}
+DOCKER_RUN_ARGS="-v ubuntu-box-home-${UBUNTU_VERSION}:/home --network host"
 
 # Handle start
 function __start {

@@ -9,6 +9,7 @@ while test -n "$1"; do
 		shell|sh) COMMAND=shell ;;
 		clear) COMMAND=clear ;;
 		-v) set -x ;;
+		--args) shift; DOCKER_RUN_ARGS="$DOCKER_RUN_ARGS $1" ;;
 	esac
 	shift
 done
@@ -16,7 +17,7 @@ done
 UBUNTU_VERSION=${UBUNTU_VERSION:-latest}
 CONTAINER_NAME=ubuntu-box-${UBUNTU_VERSION}
 IMAGE_NAME=zedaav/ubuntu-box:${UBUNTU_VERSION}
-DOCKER_RUN_ARGS="-v ubuntu-box-home-${UBUNTU_VERSION}:/home --network host"
+DOCKER_RUN_ARGS="$DOCKER_RUN_ARGS -v ubuntu-box-home-${UBUNTU_VERSION}:/home --network host"
 
 # Handle start
 function __start {

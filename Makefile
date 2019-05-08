@@ -1,16 +1,21 @@
 .SILENT:
-.PHONY: image config
+.PHONY: images configs all
 
-ifeq ($(UBUNTU_VERSION),)
-$(error Please set UBUNTU_VERSION)
-endif
+# Supported versions (all LTS + latest)
+VERSIONS := 16.04 18.04 latest 19.04
+CONFIGS := $(foreach TAG,$(VERSIONS),docker/$(TAG).Dockerfile)
+IMAGES := $(foreach TAG,$(VERSIONS),image_$(TAG))
+CURTAG = $(subst image_,,$(subst docker/,,$(subst .Dockerfile,,$@)))
 
-image: config
-	docker pull ubuntu:$(UBUNTU_VERSION)
-	cd out/$(UBUNTU_VERSION) && docker build --no-cache --rm --force-rm --tag zedaav/ubuntu-box:$(UBUNTU_VERSION) .
+all: configs images
 
-config:
-	rm -Rf out/$(UBUNTU_VERSION)
-	mkdir -p out/$(UBUNTU_VERSION)
-	cp -a docker/* out/$(UBUNTU_VERSION)
-	sed -i out/$(UBUNTU_VERSION)/Dockerfile -e "s/{tag}/$(UBUNTU_VERSION)/"
+configs: $(CONFIGS)
+
+$(CONFIGS): docker/template.Dockerfile
+	cp docker/template.Dockerfile $@
+	sed -i $@ -e "s/{tag}/$(CURTAG)/"
+
+images: $(IMAGES)
+
+image_%:
+	cd docker && docker build -f ./$(CURTAG).Dockerfile --pull --no-cache --rm --force-rm --tag libra-net/ubuntu-box:$(CURTAG) .

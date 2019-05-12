@@ -1,21 +1,24 @@
 .SILENT:
-.PHONY: images configs all
+.PHONY: configs all
 
-# Supported versions (all LTS + latest)
-VERSIONS := 16.04 18.04 latest 19.04
-CONFIGS := $(foreach TAG,$(VERSIONS),docker/$(TAG).Dockerfile)
-IMAGES := $(foreach TAG,$(VERSIONS),image_$(TAG))
-CURTAG = $(subst image_,,$(subst docker/,,$(subst .Dockerfile,,$@)))
+CURRENT_BRANCH_NAME := $(shell git branch | grep \* | cut -d ' ' -f2)
+# Supported configurations (all Ubuntu LTS + latest)
+CONFIGS := $(shell cat docker/configs.txt)
+.PHONY: $(CONFIGS)
+DOCKERFILE = docker/$@.Dockerfile
+IMAGE_NAME = $(word 1,$(subst _, ,$@))
+IMAGE_TAG = $(word 2,$(subst _, ,$@))
+BRANCH_NAME = $@_review
 
-all: configs images
+all: configs
 
 configs: $(CONFIGS)
 
 $(CONFIGS): docker/template.Dockerfile
-	cp docker/template.Dockerfile $@
-	sed -i $@ -e "s/{tag}/$(CURTAG)/"
-
-images: $(IMAGES)
-
-image_%:
-	cd docker && docker build -f ./$(CURTAG).Dockerfile --pull --no-cache --rm --force-rm --tag libra-net/ubuntu-box:$(CURTAG) .
+	git checkout $(CURRENT_BRANCH_NAME)
+	git checkout -B $(BRANCH_NAME)
+	cp docker/template.Dockerfile $(DOCKERFILE)
+	sed -i $(DOCKERFILE) -e "s/FROM image:tag/FROM $(IMAGE_NAME):$(IMAGE_TAG)/"
+	git add $(DOCKERFILE)
+	git commit -m "Update Dockerfile for $@"
+	git push origin $(BRANCH_NAME) --force

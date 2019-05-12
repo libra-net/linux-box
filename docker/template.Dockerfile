@@ -5,7 +5,10 @@ RUN ( \
     apt-get update && \
     apt-get upgrade -y && \
     apt-get dist-upgrade -y && \
-    apt install -y sudo lsb-release openssl bash-completion command-not-found openssh-client inetutils-ping nano locales && \
+    apt install -y sudo lsb-release openssl bash-completion command-not-found openssh-client inetutils-ping nano locales wget && \
+    wget -O /tmp/leaf.deb https://downloads.sierrawireless.com/tools/debian/release/leaf_1.8_all.deb && \
+    apt-get -y install /tmp/leaf.deb && \
+    rm /tmp/leaf.deb && \
     apt-get -y autoclean && \
     apt-get -y autoremove \
     )

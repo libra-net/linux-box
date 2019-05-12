@@ -1,24 +1,39 @@
 .SILENT:
-.PHONY: configs all
+.PHONY: tests help push
 
 CURRENT_BRANCH_NAME := $(shell git branch | grep \* | cut -d ' ' -f2)
 # Supported configurations (all Ubuntu LTS + latest)
 CONFIGS := $(shell cat docker/configs.txt)
-.PHONY: $(CONFIGS)
+TEST_CONFIGS := $(foreach CONFIG,$(CONFIGS),$(CONFIG)_test)
+.PHONY: $(CONFIGS) $(TEST_CONFIGS)
 DOCKERFILE = docker/Dockerfile
-IMAGE_NAME = $(word 1,$(subst -, ,$@))
-IMAGE_TAG = $(word 2,$(subst -, ,$@))
-BRANCH_NAME = $@_review
+IMAGE_NAME = $(word 1,$(subst _, ,$(subst -, ,$@)))
+IMAGE_TAG = $(word 2,$(subst _, ,$(subst -, ,$@)))
+PUSH_BRANCH_NAME = $@
 
-all: configs
+help:
+	echo "Please pick a target: 'tests' or 'push'"
 
-configs: $(CONFIGS)
+tests: $(TEST_CONFIGS)
 
-$(CONFIGS): docker/template.Dockerfile
+$(TEST_CONFIGS): docker/template.Dockerfile
 	git checkout $(CURRENT_BRANCH_NAME)
-	git checkout -B $(BRANCH_NAME)
+	git checkout -B $(PUSH_BRANCH_NAME)
 	cp docker/template.Dockerfile $(DOCKERFILE)
 	sed -i $(DOCKERFILE) -e "s/FROM image:tag/FROM $(IMAGE_NAME):$(IMAGE_TAG)/"
 	git add $(DOCKERFILE)
 	git commit -m "Update Dockerfile for $@"
-	git push origin $(BRANCH_NAME) --force
+	git push origin $(PUSH_BRANCH_NAME) --force
+
+push: $(CONFIGS)
+
+$(CONFIGS):
+	git checkout $(CURRENT_BRANCH_NAME)
+	git branch -D $(PUSH_BRANCH_NAME) $(PUSH_BRANCH_NAME)_test || true
+	git fetch origin $(PUSH_BRANCH_NAME)_test:$(PUSH_BRANCH_NAME)_test
+	git checkout $(PUSH_BRANCH_NAME)_test
+	git checkout -B $(PUSH_BRANCH_NAME)
+	git push origin $(PUSH_BRANCH_NAME) --force
+	git checkout $(CURRENT_BRANCH_NAME)
+	git branch -D $(PUSH_BRANCH_NAME) $(PUSH_BRANCH_NAME)_test
+	git push origin :$(PUSH_BRANCH_NAME)_test

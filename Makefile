@@ -5,9 +5,9 @@ CURRENT_BRANCH_NAME := $(shell git branch | grep \* | cut -d ' ' -f2)
 # Supported configurations (all Ubuntu LTS + latest)
 CONFIGS := $(shell cat docker/configs.txt)
 .PHONY: $(CONFIGS)
-DOCKERFILE = docker/$@.Dockerfile
-IMAGE_NAME = $(word 1,$(subst _, ,$@))
-IMAGE_TAG = $(word 2,$(subst _, ,$@))
+DOCKERFILE = docker/Dockerfile
+IMAGE_NAME = $(word 1,$(subst -, ,$@))
+IMAGE_TAG = $(word 2,$(subst -, ,$@))
 BRANCH_NAME = $@_review
 
 all: configs

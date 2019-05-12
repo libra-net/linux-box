@@ -1,4 +1,4 @@
-ubuntu_16.04
-ubuntu_18.04
-ubuntu_latest
-ubuntu_19.04
+ubuntu-16.04
+ubuntu-18.04
+ubuntu-latest
+ubuntu-19.04
